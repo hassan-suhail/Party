@@ -59,15 +59,25 @@
         input[type="submit"]:hover {
             background-color: #dd2476;
         }
-        ul {
-            list-style-type: none;
-            padding: 0;
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
         }
-        li {
-            background: rgba(255, 255, 255, 0.2);
-            margin: 5px 0;
-            padding: 10px;
+        .buttons form {
+            margin: 0;
+        }
+        .buttons button {
+            padding: 10px 20px;
+            border: none;
             border-radius: 5px;
+            background-color: #ff512f;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .buttons button:hover {
+            background-color: #dd2476;
         }
     </style>
 </head>
@@ -83,6 +93,14 @@
                 </ul>
             {% endif %}
         {% endwith %}
+        <div class="buttons">
+            <form action="/delete_all" method="post">
+                <button type="submit">Delete All Records</button>
+            </form>
+            <form action="/download_csv" method="post">
+                <button type="submit">Download CSV</button>
+            </form>
+        </div>
         <table>
             <tr>
                 <th>ID</th>

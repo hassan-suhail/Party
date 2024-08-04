@@ -1,8 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response
 import sqlite3
 import smtplib
 from email.mime.text import MIMEText
 import logging
+import csv
+from io import StringIO
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -34,7 +36,6 @@ def send_email(to_email, subject, message):
         logging.debug(f"Email sent to {to_email}")
     except Exception as e:
         logging.error(f"Failed to send email: {e}")
-
 
 @app.route('/')
 def form():
@@ -101,28 +102,48 @@ def respond(req_id):
         flash('An error occurred. Please try again.')
     return redirect(url_for('view_requests'))
 
-@app.route('/test_email')
-def test_email():
+@app.route('/delete_all', methods=['POST'])
+def delete_all():
+    if not session.get('admin'):
+        return redirect(url_for('admin'))
     try:
-        send_email('recipient_email@example.com', 'Test Subject', 'This is a test email.')
-        return 'Email sent!'
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM requests")
+        conn.commit()
+        conn.close()
+        flash('All records deleted successfully.')
     except Exception as e:
-        logging.error(f"Error in test_email route: {e}")
-        return 'Failed to send email.'
+        logging.error(f"Error in delete_all route: {e}")
+        flash('An error occurred. Please try again.')
+    return redirect(url_for('view_requests'))
+
+@app.route('/download_csv', methods=['POST'])
+def download_csv():
+    if not session.get('admin'):
+        return redirect(url_for('admin'))
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM requests")
+        rows = cursor.fetchall()
+        conn.close()
+
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['ID', 'Name', 'Email', 'Date', 'Time', 'Status', 'Note'])
+        for row in rows:
+            writer.writerow(row)
+        output.seek(0)
+
+        response = make_response(output.getvalue())
+        response.headers["Content-Disposition"] = "attachment; filename=requests.csv"
+        response.headers["Content-type"] = "text/csv"
+        return response
+    except Exception as e:
+        logging.error(f"Error in download_csv route: {e}")
+        flash('An error occurred. Please try again.')
+        return redirect(url_for('view_requests'))
 
 if __name__ == '__main__':
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            date TEXT NOT NULL,
-            time TEXT NOT NULL,
-            status TEXT DEFAULT 'Pending',
-            note TEXT
-        )
-    ''')
-    conn.close()
     app.run(debug=True)
